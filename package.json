@@ -1,0 +1,9 @@
+{
+  "name": "isaac-wasm",
+  "version": "1.0.0",
+  "description": "WASM implementation of the Isaac cipher, ported from JavaScript.",
+  "main": "index.html",
+  "keywords": ["isaac", "csprng", "rng", "prng", "cipher", "javascript", "wasm", "web", "assembly"],
+  "author": "GirkovArpa",
+  "license": "MIT"
+}
