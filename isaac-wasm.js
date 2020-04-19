@@ -1,63 +1,94 @@
 'use strict';
 
-const IsaacWASM = async function () {
-  const memory = new WebAssembly.Memory({
-    initial: 32767,
-    maximum: 65536
-  });
-  const imports = {
-    env: {
-      memory: memory
+import WasmLoader from './wasmLoader.js';
+import str2ints from './string2integers.js';
+
+export default class IsaacWasm {
+
+  #wasmLoader = new WasmLoader();
+  #wasm;
+
+  #seed;
+  #memory;
+  #results;
+
+  #ints;
+  #floats;
+
+  #seedPointer = 0;
+  #memoryPointer;
+  #resultsPointer;
+
+  #outputPointer;
+
+  async init() {
+    this.#wasm = await this.#wasmLoader.loadWasm('isaac.wasm');
+    const { buffer } = this.#wasm.memory;
+    const { byteLength } = buffer;
+
+    this.#seed = new Int32Array(buffer, this.#seedPointer, 256);
+
+    this.#memoryPointer = this.#seed.BYTES_PER_ELEMENT * this.#seed.length;
+    this.#memory = new Int32Array(buffer, this.#memoryPointer, 256);
+
+    this.#resultsPointer = this.#memoryPointer + (this.#memory.BYTES_PER_ELEMENT * this.#memory.length);
+    this.#results = new Int32Array(buffer, this.#resultsPointer, 256);
+
+    this.#outputPointer = this.#resultsPointer + (this.#results.BYTES_PER_ELEMENT * this.#results.length);
+
+    const remainingBytes = byteLength - this.#outputPointer;
+
+    this.#ints = new Int32Array(buffer, this.#outputPointer, remainingBytes / Int32Array.BYTES_PER_ELEMENT);
+    this.#floats = new Float64Array(buffer, this.#outputPointer, remainingBytes / Float64Array.BYTES_PER_ELEMENT);
+  }
+
+  internals() {
+    return {
+      wasm: this.#wasm,
+      seed: this.#seed,
+      memory: this.#memory,
+      results: this.#results,
+      ints: this.#ints,
+      floats: this.#floats,
+      seedPointer: this.#seedPointer,
+      memoryPointer: this.#memoryPointer,
+      resultsPointer: this.#resultsPointer,
+      outputPointer: this.#outputPointer,
+    };
+  }
+
+  seed(s) {
+    if (typeof s == 'string') {
+      s = str2ints(s);
     }
-  };
-  const response = await fetch('isaac.wasm');
-  const buffer = await response.arrayBuffer();
-  const wasmInstance = await WebAssembly.instantiate(buffer, imports);
-  const m_ptr = 0;
-  const r_ptr = 1024;
-  const s_ptr = 2048;
-  const outputRand_ptr = 3072;
-  const outputRandom_ptr = 3072 + (8 * 1_000_000);
-  const _m = new Int32Array(wasmInstance.instance.exports.memory.buffer, m_ptr, 256);
-  const _r = new Int32Array(wasmInstance.instance.exports.memory.buffer, r_ptr, 256);
-  const _s = new Int32Array(wasmInstance.instance.exports.memory.buffer, s_ptr, 256);
-  const outputRand = new Int32Array(wasmInstance.instance.exports.memory.buffer, outputRand_ptr, 1_000_000);
-  const outputRandom = new Float64Array(wasmInstance.instance.exports.memory.buffer, outputRandom_ptr, 1_096_768);
-  const exps = wasmInstance.instance.exports;
-  const _seed = exps.seed;
-  const _prng = exps.prng;
-  const _rand = exps.rand;
-  const _random = exps.random;
-  const _randFill = exps.randFill;
-  const _randomFill = exps.randomFill;
+    if (typeof s == 'number') {
+      s = [s];
+    }
+    for (let i = 0; i < s.length; i++) {
+      this.#seed[i] = s[i];
+    }
+    this.#wasm.functions.seed(this.#resultsPointer, this.#memoryPointer, this.#seedPointer);
+  }
 
-  return {
-    seed: function (s) {
-      for (let i = 0; i < s.length; i++) {
-        _s[i] = s[i];
-      }
-      _seed(m_ptr, r_ptr, s_ptr);
-    },
-    prng: function (runs) {
-      _prng(m_ptr, r_ptr, runs);
-    },
-    rand: function (n) {
-      if (!n) {
-        return _rand(m_ptr, r_ptr);
-      } else {
-        _randFill(m_ptr, r_ptr, outputRand_ptr, n);
-        return outputRand.slice(0, n);
-      }
-    },
-    random: function (n) {
-      if (!n) {
-        return _random(m_ptr, r_ptr);
-      } else {
-        _randomFill(m_ptr, r_ptr, outputRandom_ptr, n);
-        return outputRandom.slice(0, n);
-      }
-    },
-  };
-};
+  prng(runs) {
+    this.#wasm.functions.shuffle(this.#resultsPointer, this.#memoryPointer, runs);
+  }
 
-export default IsaacWASM;
+  rand(count) {
+    if (!count) {
+      return this.#wasm.functions.randomInt(this.#resultsPointer, this.#memoryPointer);
+    } else {
+      this.#wasm.functions.randomInts(this.#resultsPointer, this.#memoryPointer, this.#outputPointer, count);
+      return this.#ints.slice(0, count);
+    }
+  }
+
+  random(count) {
+    if (!count) {
+      return this.#wasm.functions.randomFloat(this.#resultsPointer, this.#memoryPointer);
+    } else {
+      this.#wasm.functions.randomFloats(this.#resultsPointer, this.#memoryPointer, this.#outputPointer, count);
+      return this.#floats.slice(0, count);
+    }
+  }
+}

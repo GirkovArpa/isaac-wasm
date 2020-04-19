@@ -1,45 +1,33 @@
 <script type="module">
-  import Isaac from './isaac-js.js';
-  import IsaacWASM from './isaac-wasm.js';
+  import IsaacJs from './isaac-js.js';
+  import IsaacWasm from './isaac-wasm.js';
 
   (async () => {
-    const isaacJS = new Isaac();
-    const isaacWASM = await IsaacWASM();
+    const isaacJs = new IsaacJs();
+    const isaacWasm = new IsaacWasm();
+    await isaacWasm.init();
+    
+    console.log(isaacWasm.internals());
 
-    isaacJS.seed([1337, 123]); isaacWASM.seed([1337, 123]);
+    isaacJs.seed('sesame'); isaacWasm.seed('sesame');
 
-    console.log(isaacJS.rand(), isaacWASM.rand());
-    console.log(isaacJS.random(), isaacWASM.random());
+    console.log(isaacJs.rand(), isaacWasm.rand());
+    console.log(isaacJs.random(), isaacWasm.random());
 
-    isaacJS.prng(); isaacWASM.prng();
+    isaacJs.prng(32); isaacWasm.prng(32);
 
-    console.log(isaacJS.rand(), isaacWASM.rand());
-    console.log(isaacJS.random(), isaacWASM.random());
+    console.log(isaacJs.rand(), isaacWasm.rand());
+    console.log(isaacJs.random(), isaacWasm.random());
 
-    const randomIntegersJS = [];
-    console.time('generate 1 million random ints with JS');
-    for (let i = 0; i < 1_000_000; i++) {
-      randomIntegersJS.push(isaacJS.rand());
-    }
-    console.timeEnd('generate 1 million random ints with JS');
-    //console.log(randomIntegersJS);
+    console.log(new Array(5).fill(0).map(o => isaacJs.rand()), isaacWasm.rand(5));
+    console.log(new Array(5).fill(0).map(o => isaacJs.random()), isaacWasm.random(5));
 
-    console.time('generate 1 million random ints with WASM');
-    const randomIntegersWASM = isaacWASM.rand(1_000_000);
-    console.timeEnd('generate 1 million random ints with WASM');
-    //console.log(randomIntegersWASM);
+    console.time('1_000_000 floats WASM');
+    console.log(isaacWasm.random(1_000_000));
+    console.timeEnd('1_000_000 floats WASM');
 
-    const randomFloatsJS = [];
-    console.time('generate 1 million random floats with JS');
-    for (let i = 0; i < 1_000_000; i++) {
-      randomFloatsJS.push(isaacJS.random());
-    }
-    console.timeEnd('generate 1 million random floats with JS');
-    //console.log(randomFloatsJS);
-
-    console.time('generate 1 million random floats with WASM');
-    const randomFloatsWASM = isaacWASM.random(1_000_000);
-    console.timeEnd('generate 1 million random floats with WASM');
-    //console.log(randomFloatsWASM);
+    console.time('1_000_000 floats JS');
+    console.log(new Array(1_000_000).fill(0).map(o => isaacJs.random()));
+    console.timeEnd('1_000_000 floats JS');    
   })();
 </script>

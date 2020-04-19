@@ -1,43 +1,15 @@
-// emcc -Os isaac.cpp -o isaac.wasm" -s EXPORTED_FUNCTIONS="['_seed', '_prng', '_rand', '_random', '_randFill', '_randomFill']" -s WASM=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0
-
-/* ----------------------------------------------------------------------
- * Copyright (c) 2012 Yves-Marie K. Rinquin
- *
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- * ----------------------------------------------------------------------
- *
- * ISAAC is a cryptographically secure pseudo-random number generator
- * (or CSPRNG for short) designed by Robert J. Jenkins Jr. in 1996 and
- * based on RC4. It is designed for speed and security.
- *
- * ISAAC's informations & analysis:
- *   http://burtleburtle.net/bob/rand/isaac.html
- * ISAAC's implementation details:
- *   http://burtleburtle.net/bob/rand/isaacafa.html
- *
- * ISAAC succesfully passed TestU01
- *
- * ----------------------------------------------------------------------
- * */
-
+/** emcc
+* -Os
+* -s STANDALONE_WASM
+* -s INITIAL_MEMORY=1024mb
+* -s TOTAL_MEMORY=1024mb
+* -s TOTAL_STACK=512mb
+* -s EXPORTED_FUNCTIONS="['_myFunction1,' '_myFunction2']"
+* -Wl,--no-entry
+* "filename.cpp"
+* - o
+* "filename.wasm"
+*/
 #define MIX_SEEDS {a ^= b << 11; d = this->add(d, a); b = this->add(b, c);\
 b ^= unsigned(c) >> 2; e = this->add(e, b); c = this->add(c, d);\
 c ^= d << 8; f = this->add(f, c); d = this->add(d, e);\
@@ -78,13 +50,13 @@ public:
     this->gnt = 0L;
   }
 
-  void prng(long long int n) {
-    long long int x;
-    long long int y;
+  void prng(long int n) {
+    long int x;
+    long int y;
 
-    long long int runs = n;
-    if (runs == 0) {
-      runs = 1;
+    long int runs = n;
+    if (runs == 0L) {
+      runs = 1L;
     }
 
     while (runs--) {
@@ -178,32 +150,32 @@ extern "C" {
     isaac.seed(s);
   }
 
-  long int rand(long int*r, long int *m) {
+  void shuffle(long int *r, long int *m, long int runs) {
+    Isaac isaac(r, m);
+    isaac.prng(runs);
+  }
+
+  long int randomInt(long int*r, long int *m) {
     Isaac isaac(r, m);
     return isaac.rand();
   }
 
-  double random(long int *r, long int *m) {
+  double randomFloat(long int *r, long int *m) {
     Isaac isaac(r, m);
     return isaac.random();
   }
 
-  void randFill(long int *r, long int *m, long int *output, long int count) {
+  void randomInts(long int *r, long int *m, long int *output, long int count) {
     Isaac isaac(r, m);
     for (long int i = 0L; i < count; i++) {
       output[i] = isaac.rand();
     }
   }
 
-  void randomFill(long int *r, long int *m, double *output, long int count) {
+  void randomFloats(long int *r, long int *m, double *output, long int count) {
     Isaac isaac(r, m);
     for (long int i = 0L; i < count; i++) {
       output[i] = isaac.random();
     }
-  }
-
-  void prng(long int *r, long int *m, long int runs) {
-    Isaac isaac(r, m);
-    isaac.prng(runs);
   }
 }

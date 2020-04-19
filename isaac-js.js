@@ -38,7 +38,9 @@
 
 'use strict';
 
-export default class Isaac {
+import str2ints from './string2integers.js';
+
+export default class IsaacJs {
 
   #m = Array(256); // internal memory
   #acc = 0;        // accumulator
@@ -62,10 +64,15 @@ export default class Isaac {
     this.#gnt = 0;
   }
 
-  /**
-  * @param {array} s - An array of integers.
-  */
   seed(s) {
+
+    if (typeof s == 'string') {
+      s = str2ints(s);
+    }
+    if (typeof s == 'number') {
+      s = [s];
+    }
+
     const GOLDEN_RATIO = 0x9e3779b9;
     let a = GOLDEN_RATIO;
     let b = GOLDEN_RATIO;
